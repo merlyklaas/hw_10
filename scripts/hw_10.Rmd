@@ -1,0 +1,134 @@
+---
+title: "hw_10"
+author: "Merly Klaas"
+date: "11/30/2021"
+output: 
+    html_document:
+      toc: true
+      toc_float: true
+      toc_depth: 3
+      highlight: zenburn
+      code_folding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+library(tidyverse)
+library(ggthemes)
+library(forcats)
+library(knitr)
+library(kableExtra)
+library(gt)
+```
+
+
+# 2a. Reorder factors
+  * Get familiar with the gss_cat data within the {forcats} package.
+  * Remove the rows with missing data in the tvhours column
+  * Calculate the mean tvhours by marital status.
+  * Display the results as a point plot of average TV consumption by marital status (tvhours on the x-axis and martial on they y-axis)
+  * In your plot, reorder the levels of marital according to tvhours. 
+  * Give your plot meaningful axis labels and a title.
+
+```{r}
+summary <- gss_cat %>% 
+  filter(!is.na(tvhours)) %>% 
+  group_by(marital) %>% 
+  summarise(tvhours_mean = mean(tvhours, na.rm = TRUE)) %>% 
+  mutate(marital = fct_reorder(marital, tvhours_mean))
+  
+summary %>% ggplot(aes(tvhours_mean, marital)) +
+  geom_point() +
+    labs(title = "Table 1",
+         subtitle = "TV Consumption by Marital Status", 
+         x = "The Average TV Hours", 
+         y = "Marital Status")
+
+```
+
+# 2b. Working with tables
+  * Display the same results (mean tvhours by marital status) as a table using kable().
+  * Change the column names.
+  * Round the mean tvhours to one decimal.
+  * Bold the row with the highest mean tvhours.
+
+```{r}
+gss_cat %>% 
+  filter(!is.na(tvhours)) %>% 
+  group_by(marital) %>% 
+  summarise(tvhours_mean = mean(tvhours, na.rm = TRUE)) %>% 
+  mutate(marital = fct_reorder(marital, tvhours_mean)) %>% 
+  arrange(tvhours_mean) %>% 
+  kable(
+    col.names = c("Marital Status", "Average TV Hours"),
+    digits = 1) %>% 
+    row_spec(6, bold = TRUE)
+```
+# 3a. Recode factors
+  * Use any of the functions we talked about in class to display the levels of the marital variable. 
+  * Recode or collapse the marital column into three categories: “Not married”, “Married”, and “No answer”.
+  * Calculate the mean tvhours by marital status.
+  * Display the results as a column plot of average TV consumption by marital status (martial on the x-axis and tvhours on they y-axis).
+  * From left to right, the columns in your plot should read: “Not married”, “Married”, and “No answer”.
+  * Make your plot look a little nicer with some color, different theme, meaningful axis labels, and a title.
+  
+```{r}
+levels(gss_cat$marital)
+gss_cat %>% 
+  drop_na() %>% 
+  mutate(marital = fct_collapse(marital,
+                                `Not married` = c("Never married", "Separated", "Divorced", "Widowed"),
+                                Married = c("Married"),
+                                `No Answer` = c("No Answer"))) %>%  
+  group_by(marital) %>% 
+  summarize(tv_hours_mean = mean(tvhours)) %>% 
+  mutate(marital = fct_relevel(marital,
+              "Not married",
+              "Married",
+              "No Answer")) %>% 
+  ggplot(aes(marital,tv_hours_mean)) + 
+  geom_col(stat ="identity", fill = "#FF9999", color = "red")+
+  theme_tufte() +
+  scale_fill_manual(values = colorblind_pal()(3)) +
+  scale_color_manual(values = colorblind_pal()(3))+
+  labs(title = "Average TV Consumption by Collapsed Marital Status",
+       subtitle = "Not married, Married, No Answer",
+       x = "Marital Status",
+       y = "Average TV Hours") 
+
+```
+
+# 3b. Working with tables
+  * Display the same results (mean tvhours by collapsed marital status) as a table using the {gt}.
+  * Change the column names.
+  * Round the mean tvhours to one decimal.
+  * Highlight in yellow the row with the lowest mean tvhours.
+  
+```{r}
+
+gss_cat %>% 
+  drop_na() %>% 
+  mutate(marital = fct_collapse(marital,
+                                `Not married` = c("Never married", "Separated", "Divorced", "Widowed"),
+                                Married = c("Married"),
+                                `No Answer` = c("No Answer"))) %>%  
+  group_by(marital) %>% 
+  summarize(tv_hours_mean = mean(tvhours)) %>% 
+  arrange(desc(tv_hours_mean)) %>% 
+  gt() %>% 
+  cols_label(marital = "collapsed_marital_status",
+             tv_hours_mean = "average_tvhours") %>% 
+  fmt_number(columns = 2,
+             decimals = 1) %>% 
+  tab_style(
+    cell_fill(color = "yellow"),
+    locations = (cells_body(
+      rows = 3))
+    )
+```
+
+  
